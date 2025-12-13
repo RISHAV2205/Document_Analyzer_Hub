@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional,List
 from fastapi import FastAPI,Response,status,HTTPException,Depends
 from fastapi.params import Body
 from pydantic import BaseModel  # it is used to validate schema coming from user
@@ -6,20 +6,17 @@ from random import randrange
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import time
-from . import models
+from . import models,schema,utils
 from sqlalchemy.orm import Session
 from .database import engine,session_local,get_db
+from passlib.context import CryptContext
 
+
+ 
 models.Base.metadata.create_all(bind=engine)
 app = FastAPI()
 
 
-
-class Post(BaseModel):  #pydantic model schema
-    title:str
-    content:str
-    published:bool=True
-    # rating:Optional[int]=None
     
     
 # connect to database
@@ -51,17 +48,17 @@ while True:
 def root():
     return {"message": "Hello Everyone"}
 
-@app.get("/posts")
+@app.get("/posts",response_model=List[schema.Post])
 def get_post(db: Session=Depends(get_db)):
     # cursor.execute("""select * from posts""")
     #using sqlalchemy
     posts=db.query(models.post).all()
     # print(posts)
-    return {"data": posts}
+    return posts
 
 
-@app.post("/posts",status_code=status.HTTP_201_CREATED)
-def create_post(post:Post,db:Session=Depends(get_db)): #it will take the body and convert into pydantic model
+@app.post("/posts",status_code=status.HTTP_201_CREATED,response_model=schema.Post)# response model will handle date send back to user 
+def create_post(post:schema.PostCreate,db:Session=Depends(get_db)): #it will take the body and convert into pydantic model
     # we cannot use f string here because of sql injection
     # cursor.execute("""INSERT INTO posts (title,content,published) VALUES (%s,%s,%s) RETURNING *""",(post.title,post.content,post.published))
     # new_post=cursor.fetchall()
@@ -73,7 +70,7 @@ def create_post(post:Post,db:Session=Depends(get_db)): #it will take the body an
     db.add(new_post)
     db.commit()
     db.refresh(new_post)
-    return {"data":new_post}
+    return new_post
 
 # return latest post
 # @app.get("/posts/latest")
@@ -81,13 +78,8 @@ def create_post(post:Post,db:Session=Depends(get_db)): #it will take the body an
 #     post=my_post[len(my_post)-1]
 #     return {"detail":post}
 
-@app.get("/sqlalchemy")
-def test_post(db:Session=Depends(get_db)):
-    posts=db.query(models.post)
-    print(posts)
-    return {"status":"success"}
 
-@app.get("/posts/{id}")  #path parameter
+@app.get("/posts/{id}",response_model=schema.Post)  #path parameter
 def get_post(id:int,db:Session =Depends(get_db)):
     # cursor.execute("""SELECT * from posts where id =%s""",(str(id)))
     # post=cursor.fetchone()
@@ -97,7 +89,7 @@ def get_post(id:int,db:Session =Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f"post with id :{id} was not found")
         # response.status_code=status.HTTP_404_NOT_FOUND
         # return {"post_detail":"id not found"}
-    return { "post_detail":post}
+    return post
 
 @app.delete("/posts/{id}",status_code=status.HTTP_204_NO_CONTENT)
 def delete_post(id:int,db:Session=Depends(get_db)):
@@ -112,8 +104,8 @@ def delete_post(id:int,db:Session=Depends(get_db)):
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@app.put("/posts/{id}")
-def update_post(id:int,upd_post:Post,db:Session=Depends(get_db)):
+@app.put("/posts/{id}",response_model=schema.Post)
+def update_post(id:int,upd_post:schema.PostCreate,db:Session=Depends(get_db),response_model=schema.Post):
     # cursor.execute("""UPDATE posts set title=%s ,content=%s,published=%s where id =%s RETURNING *""",(post.title,post.content,post.published,str(id))) 
     # updated_post=cursor.fetchone()
     # conn.commit()
@@ -128,7 +120,26 @@ def update_post(id:int,upd_post:Post,db:Session=Depends(get_db)):
     post_query.update(upd_post.dict(),synchronize_session=False)
     db.commit()
 
-    return {"data":post_query.first()}
+    return post_query.first()
     
 
 
+@app.post("/users",status_code=status.HTTP_201_CREATED,response_model=schema.UserOut)
+def create_users(user:schema.UserCreate,db:Session=Depends(get_db)):
+    #hash the password
+    hashed_password=utils.hash(user.password)
+    user.password=hashed_password
+    
+    new_user=models.user(**user.dict())
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return new_user
+
+@app.get("/users/{id}",response_model=schema.UserOut)
+def get_users(id:int,db:Session=Depends(get_db)):
+    user=db.query(models.user).filter(models.user.id==id).first()
+    if not user:
+        return HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f"user with {id} not found")
+    return user
+    
