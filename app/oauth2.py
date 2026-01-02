@@ -4,7 +4,8 @@ from . import schema
 from fastapi import Depends,status,HTTPException
 from fastapi.security import OAuth2PasswordBearer
 import os
-
+from dotenv import load_dotenv
+load_dotenv() 
 
 oauth2_scheme=OAuth2PasswordBearer(tokenUrl="login")  #auth login url
 #SECRET KEY
@@ -16,10 +17,13 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
+# print("SECRET_KEY:", SECRET_KEY, type(SECRET_KEY))
+
 def create_access_token(data:dict):
     to_encode=data.copy()
     expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp":expire})
+    print(to_encode)
     
     encoded_jwt=jwt.encode(to_encode,SECRET_KEY,algorithm=ALGORITHM)
     

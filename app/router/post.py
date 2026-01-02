@@ -25,8 +25,9 @@ def create_post(post:schema.PostCreate,db:Session=Depends(get_db),user_id:int=De
     
     # using sqlalchemy
     print(user_id)
-   
-    new_post=models.post(**post.dict())
+    
+    # post.add("owner id":user_id)
+    new_post=models.post(**post.dict(),owner_id=user_id.id)
     db.add(new_post)
     db.commit()
     db.refresh(new_post)
