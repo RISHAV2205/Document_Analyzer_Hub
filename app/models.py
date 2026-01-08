@@ -27,5 +27,16 @@ class user(Base):
     id =Column(Integer,primary_key=True,nullable=False,autoincrement=True)
     created_at=Column(TIMESTAMP(timezone=True),nullable=False,server_default=text("now()"))
     posts = relationship("post", back_populates="owner")
+    
+    
+class Document(Base):
+    __tablename__ = "documents"
+
+    id = Column(Integer, primary_key=True, index=True)
+    filename = Column(String, nullable=False)
+    file_path = Column(String, nullable=False)
+    owner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
+    status = Column(String, default="uploaded")  # uploaded | processing | ready | failed for asynchronos task
+    created_at = Column(TIMESTAMP(timezone=True), server_default=text("now()"))
         
     
