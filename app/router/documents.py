@@ -1,0 +1,65 @@
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status
+from sqlalchemy.orm import Session
+import os
+import shutil
+
+from app import models
+from app.database import get_db
+from app.oauth2 import get_current_user
+
+
+router = APIRouter(
+    prefix="/documents",
+    tags=["Documents"]
+)
+
+UPLOAD_DIR = "app/uploads"
+
+@router.post("/upload", status_code=status.HTTP_201_CREATED)
+def upload_document(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    # validating path of a file
+    allowed_extensions = [".pdf", ".txt", ".docx"]
+    file_ext = os.path.splitext(file.filename)[1]
+
+    if file_ext not in allowed_extensions:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unsupported file type"
+        )
+
+    # Created unique file path
+    file_path = f"{UPLOAD_DIR}/{current_user.id}_{file.filename}"
+
+    # Save file to disk
+    try:
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to save file"
+        )
+
+    # Creating DB records
+    new_document = models.Document(
+        filename=file.filename,
+        file_path=file_path,
+        owner_id=current_user.id,
+        status="uploaded"
+    )
+
+    db.add(new_document)
+    db.commit()
+    db.refresh(new_document)
+
+    # response 
+    return {
+        "id": new_document.id,
+        "filename": new_document.filename,
+        "status": new_document.status
+    }
+
