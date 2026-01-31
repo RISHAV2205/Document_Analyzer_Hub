@@ -6,6 +6,7 @@ import shutil
 from app import models
 from app.database import get_db
 from app.oauth2 import get_current_user
+from app.services.text_extractor import extract_text
 
 
 router = APIRouter(
@@ -55,6 +56,21 @@ def upload_document(
     db.add(new_document)
     db.commit()
     db.refresh(new_document)
+    
+    
+    try:
+        text_path = extract_text(file_path)
+
+        new_document.extracted_text_path = text_path
+        new_document.status = "processed"
+
+        db.commit()
+        db.refresh(new_document)
+
+    except Exception as e:
+        new_document.status = "failed"
+        db.commit()
+        raise HTTPException(status_code=500, detail=str(e))
 
     # response 
     return {

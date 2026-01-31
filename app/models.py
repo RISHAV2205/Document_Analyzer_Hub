@@ -35,6 +35,7 @@ class Document(Base):
     id = Column(Integer, primary_key=True, index=True)
     filename = Column(String, nullable=False)
     file_path = Column(String, nullable=False)
+    extracted_text_path = Column(String, nullable=True)
     owner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
     status = Column(String, default="uploaded")  # uploaded | processing | ready | failed for asynchronos task
     created_at = Column(TIMESTAMP(timezone=True), server_default=text("now()"))
