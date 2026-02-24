@@ -1,8 +1,9 @@
 from .database import Base
-from sqlalchemy import Column,Integer,String,Boolean,ForeignKey
+from sqlalchemy import Column,Integer,String,Boolean,ForeignKey,DateTime,Text
 from sqlalchemy.sql.expression import null,text
 from sqlalchemy.sql.sqltypes import TIMESTAMP
 from sqlalchemy.orm import relationship
+from datetime import datetime
 
 class post(Base):
     __tablename__="posts"
@@ -39,5 +40,22 @@ class Document(Base):
     owner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
     status = Column(String, default="uploaded")  # uploaded | processing | ready | failed for asynchronos task
     created_at = Column(TIMESTAMP(timezone=True), server_default=text("now()"))
-        
+    chunks = relationship(
+        "DocumentChunk",
+        back_populates="document",
+        cascade="all, delete-orphan"
+    )    
+
+
+class DocumentChunk(Base):
+    __tablename__ = "document_chunks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    document_id = Column(Integer, ForeignKey("documents.id", ondelete="CASCADE"))
+    chunk_index = Column(Integer, nullable=False)
+    chunk_text = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationship
+    document = relationship("Document", back_populates="chunks")
     

@@ -7,6 +7,7 @@ from app import models
 from app.database import get_db
 from app.oauth2 import get_current_user
 from app.services.text_extractor import extract_text
+from app.services.document_processor import process_extracted_text
 
 
 router = APIRouter(
@@ -44,6 +45,8 @@ def upload_document(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to save file"
         )
+    
+    
 
     # Creating DB records
     new_document = models.Document(
@@ -72,6 +75,13 @@ def upload_document(
         db.commit()
         raise HTTPException(status_code=500, detail=str(e))
 
+
+
+    # pipeline for text cleaning and chunking
+    chunks=process_extracted_text(text_path)
+    # print(chunks)
+    
+    
     # response 
     return {
         "id": new_document.id,

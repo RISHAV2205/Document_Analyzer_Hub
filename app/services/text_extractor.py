@@ -6,7 +6,7 @@ PROCESSED_TEXT_DIR = "app/processed/text"
 os.makedirs(PROCESSED_TEXT_DIR, exist_ok=True)
 
 
-def extract_text(file_path: str) -> str:
+def extract_text(file_path: str):
     extension = os.path.splitext(file_path)[1].lower()
 
     if extension == ".pdf":
@@ -32,7 +32,7 @@ def extract_text(file_path: str) -> str:
     return text_path
 
 
-def _extract_pdf(file_path: str) -> str:
+def _extract_pdf(file_path: str):
     text = ""
     with fitz.open(file_path) as doc:
         for page in doc:
@@ -40,7 +40,7 @@ def _extract_pdf(file_path: str) -> str:
     return text
 
 
-def _extract_docx(file_path: str) -> str:
+def _extract_docx(file_path: str):
     doc = Document(file_path)
     return "\n".join(p.text for p in doc.paragraphs)
 
