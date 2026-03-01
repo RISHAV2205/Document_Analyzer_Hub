@@ -1,5 +1,5 @@
 from .database import Base
-from sqlalchemy import Column,Integer,String,Boolean,ForeignKey,DateTime,Text
+from sqlalchemy import Column,Integer,String,Boolean,ForeignKey,DateTime,Text,JSON
 from sqlalchemy.sql.expression import null,text
 from sqlalchemy.sql.sqltypes import TIMESTAMP
 from sqlalchemy.orm import relationship
@@ -55,6 +55,7 @@ class DocumentChunk(Base):
     chunk_index = Column(Integer, nullable=False)
     chunk_text = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+    embedding = Column(JSON, nullable=True)
 
     # Relationship
     document = relationship("Document", back_populates="chunks")

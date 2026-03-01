@@ -9,6 +9,9 @@ from app.oauth2 import get_current_user
 from app.services.text_extractor import extract_text
 from app.services.document_processor import process_extracted_text
 
+# for embedding
+from app.embedding import model
+
 
 router = APIRouter(
     prefix="/documents",
@@ -48,7 +51,7 @@ def upload_document(
     
     
 
-    # Creating DB records
+    # Creating DB records with metadata
     new_document = models.Document(
         filename=file.filename,
         file_path=file_path,
@@ -80,6 +83,19 @@ def upload_document(
     # pipeline for text cleaning and chunking
     chunks=process_extracted_text(text_path)
     # print(chunks)
+    
+    # storing chunks in db
+    for i, text in enumerate(chunks):
+        vector = model.encode(text)
+        chunk = models.DocumentChunk(
+            document_id=new_document.id,
+            chunk_index=i,
+            chunk_text=text,
+            embedding=vector.tolist()
+            )
+        db.add(chunk)
+    db.commit()
+    
     
     
     # response 
